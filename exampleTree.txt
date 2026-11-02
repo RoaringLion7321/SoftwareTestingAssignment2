@@ -1,0 +1,1117 @@
+# AST dump of hospital_management.py, with comments.
+# Lines starting with # are explanations. Everything else is ast.dump() output.
+#
+# Quick guide to the node types:
+#   Name(id='x')        a name: variable, class, or function
+#   ctx=Load / Store    the name is being read / being assigned
+#   Attribute           x.attr   (value=x, attr='attr')
+#   Call                f(...)   (func=what's called, args=positional, keywords=named)
+#   Constant            a literal: 'text', 5, True, None
+#   Assign / AnnAssign  x = ...  /  x: Type = ...
+#   Subscript           x[...] or a generic type like list[Patient]
+#
+# Decision points (each adds 1 to cyclomatic complexity, i.e. WMC):
+#   If, For, While, ExceptHandler, IfExp, comprehension (+1 per `if` too),
+#   BoolOp And/Or (+1 per operator), match case (except `case _`).
+#
+# Results the tool gives for this code:
+#   Class         WMC  Cohesion      CBO  RFC
+#   Prescription    0  None            3  (none) 0 methods, 0 calls
+#   Patient        11  5/6 = 0.83      4  Patient.__post_init__  1 method, 0 calls
+#   Doctor          8  2/5 = 0.40      2  Doctor.schedule_appointment -> Patient.add_appointment  2, 1
+#   Nurse           6  0/1 = 0.00      1  Nurse.record_vitals  1, 0
+#   Pharmacist     12  2/6 = 0.33      2  Pharmacist.add_stock  1, 0
+#
+#   Coupling pairs that are 1: Patient->Prescription, Doctor->Prescription,
+#   Pharmacist->Prescription, Doctor->Patient, Nurse->Patient, Pharmacist->Patient.
+#   Every other direction is 0.
+
+# Module = the whole pasted file. body = list of its top-level statements.
+# The tool reads this tree; it never runs the code.
+Module(
+    body=[
+        # Expr(Constant(str)) = the file's docstring. Not a class, so the tool ignores it.
+        Expr(
+            value=Constant(value='Small, in-memory hospital model for a software testing assignment.\n\nUses fictional records only. No external packages or database are required.\nRun ``python hospital_management.py`` for a short demonstration.\n')),
+        # ImportFrom = `from __future__ import annotations`. Imports are ignored.
+        ImportFrom(
+            module='__future__',
+            names=[
+                alias(name='annotations')],
+            level=0),
+        # ImportFrom = `from dataclasses import dataclass, field`. Ignored.
+        ImportFrom(
+            module='dataclasses',
+            names=[
+                alias(name='dataclass'),
+                alias(name='field')],
+            level=0),
+        # ================= CLASS Prescription =================
+        # ClassDef = a class. model.py makes one _Class for each ClassDef it finds.
+        # Prescription has no FunctionDef (no methods) ->
+        #   WMC 0 | Cohesion None (no interactions) | RFC 0 methods, 0 calls
+        #   CBO 3: Patient, Doctor and Pharmacist all use it.
+        ClassDef(
+            name='Prescription',
+            # body = the statements written inside the class.
+            body=[
+                # AnnAssign = annotated assignment `medicine: str`.
+                # target=Name(..., ctx=Store()) -> the name being assigned (Store = written, Load = read).
+                # Class-level, so _collect_vars adds 'medicine' to Prescription.vars.
+                # annotation=str is built-in, so ann_type() returns None (only user classes are tracked).
+                # simple=1 just means the target is a plain name.
+                AnnAssign(
+                    target=Name(id='medicine', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='quantity', ctx=Store()),
+                    annotation=Name(id='int', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='doctor_id', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                # `dispensed: bool = False`. value= is the default value.
+                AnnAssign(
+                    target=Name(id='dispensed', ctx=Store()),
+                    annotation=Name(id='bool', ctx=Load()),
+                    value=Constant(value=False),
+                    simple=1)],
+            # decorator_list = decorators above the class: @dataclass.
+            # The tool doesn't need to treat @dataclass specially: the fields above are still member vars.
+            decorator_list=[
+                Name(id='dataclass', ctx=Load())]),
+        # ================= CLASS Patient =================
+        # WMC 11 (4 + 4 + 3) | Cohesion 5/6 = 0.83 | CBO 4 | RFC Patient.__post_init__ (1 method, 0 calls)
+        ClassDef(
+            name='Patient',
+            body=[
+                # Fields patient_id, name, age, appointments, vital_signs, prescriptions
+                # all become Patient.vars.
+                AnnAssign(
+                    target=Name(id='patient_id', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='name', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='age', ctx=Store()),
+                    annotation=Name(id='int', ctx=Load()),
+                    simple=1),
+                # `appointments: list[tuple[str, str]] = field(default_factory=list)`
+                AnnAssign(
+                    target=Name(id='appointments', ctx=Store()),
+                    # Subscript = X[...]: value= is X (list), slice= is what's inside the brackets.
+                    # ann_type() looks inside: tuple[str, str] -> str -> not a user class -> no type.
+                    annotation=Subscript(
+                        value=Name(id='list', ctx=Load()),
+                        slice=Subscript(
+                            value=Name(id='tuple', ctx=Load()),
+                            slice=Tuple(
+                                elts=[
+                                    Name(id='str', ctx=Load()),
+                                    Name(id='str', ctx=Load())],
+                                ctx=Load()),
+                            ctx=Load()),
+                        ctx=Load()),
+                    # value=Call(field(...)) = the dataclass default. A Call to `field` (not a user class) is ignored.
+                    value=Call(
+                        func=Name(id='field', ctx=Load()),
+                        keywords=[
+                            keyword(
+                                arg='default_factory',
+                                value=Name(id='list', ctx=Load()))]),
+                    simple=1),
+                AnnAssign(
+                    # `vital_signs: list[dict[str, int | float]]`.
+                    target=Name(id='vital_signs', ctx=Store()),
+                    annotation=Subscript(
+                        value=Name(id='list', ctx=Load()),
+                        slice=Subscript(
+                            value=Name(id='dict', ctx=Load()),
+                            slice=Tuple(
+                                elts=[
+                                    Name(id='str', ctx=Load()),
+                                    # BinOp(op=BitOr) = `int | float`. Built-ins, so no type.
+                                    BinOp(
+                                        left=Name(id='int', ctx=Load()),
+                                        op=BitOr(),
+                                        right=Name(id='float', ctx=Load()))],
+                                ctx=Load()),
+                            ctx=Load()),
+                        ctx=Load()),
+                    value=Call(
+                        func=Name(id='field', ctx=Load()),
+                        keywords=[
+                            keyword(
+                                arg='default_factory',
+                                value=Name(id='list', ctx=Load()))]),
+                    simple=1),
+                AnnAssign(
+                    # `prescriptions: list[Prescription]` -> ann_type() gives ("list", "Prescription").
+                    # This is how the tool knows items of self.prescriptions are Prescription objects.
+                    target=Name(id='prescriptions', ctx=Store()),
+                    annotation=Subscript(
+                        value=Name(id='list', ctx=Load()),
+                        slice=Name(id='Prescription', ctx=Load()),
+                        ctx=Load()),
+                    value=Call(
+                        func=Name(id='field', ctx=Load()),
+                        keywords=[
+                            keyword(
+                                arg='default_factory',
+                                value=Name(id='list', ctx=Load()))]),
+                    simple=1),
+                # FunctionDef = a method. It goes into Patient.methods['__post_init__'].
+                FunctionDef(
+                    name='__post_init__',
+                    # args = the parameters. The first one (self) is found by _self_name(),
+                    # and method_env() gives it the type ("obj", "Patient").
+                    args=arguments(
+                        args=[
+                            arg(arg='self')]),
+                    # body = the method's statements.
+                    body=[
+                        # If -> +1 cyclomatic complexity (WMC).
+                        If(
+                            # BoolOp(op=Or) with 2 values = `a or b` -> +1 (one operator).
+                            # (BoolOp with N values adds N - 1.)
+                            test=BoolOp(
+                                op=Or(),
+                                values=[
+                                    # UnaryOp(op=Not) = `not ...`. NOT a decision point, adds nothing.
+                                    UnaryOp(
+                                        op=Not(),
+                                        # Call = a function/method call. func= is what's being called.
+                                        operand=Call(
+                                            # Attribute = `x.attr`. This is self.patient_id.strip:
+                                            #   inner Attribute self.patient_id -> interaction ("var", "Patient", "patient_id").
+                                            #   outer .strip -> str method (built-in), not counted.
+                                            func=Attribute(
+                                                value=Attribute(
+                                                    value=Name(id='self', ctx=Load()),
+                                                    attr='patient_id',
+                                                    ctx=Load()),
+                                                attr='strip',
+                                                ctx=Load()))),
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            func=Attribute(
+                                                value=Attribute(
+                                                    value=Name(id='self', ctx=Load()),
+                                                    attr='name',
+                                                    ctx=Load()),
+                                                attr='strip',
+                                                ctx=Load())))]),
+                            body=[
+                                # Raise = `raise ValueError(...)`. ValueError isn't a user class, so it isn't counted.
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Patient ID and name are required')]))]),
+                        # If -> +1.
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                # Compare = `0 <= self.age <= 130` (two LtE = two `<=`). Comparisons aren't decision points.
+                                # self.age -> interaction ("var", "Patient", "age").
+                                operand=Compare(
+                                    left=Constant(value=0),
+                                    ops=[
+                                        LtE(),
+                                        LtE()],
+                                    comparators=[
+                                        Attribute(
+                                            value=Name(id='self', ctx=Load()),
+                                            attr='age',
+                                            ctx=Load()),
+                                        Constant(value=130)])),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Age must be between 0 and 130')]))])],
+                    # returns = the return annotation `-> None`.
+                    # __post_init__ total: CC = 1 + If + or + If = 4. Interactions: patient_id, name, age (3 own vars).
+                    returns=Constant(value=None)),
+                # ---- Patient.add_appointment ----
+                FunctionDef(
+                    name='add_appointment',
+                    args=arguments(
+                        args=[
+                            arg(arg='self'),
+                            # arg with annotation=str: built-in type, so doctor_id/date get no type in method_env().
+                            arg(
+                                arg='doctor_id',
+                                annotation=Name(id='str', ctx=Load())),
+                            arg(
+                                arg='date',
+                                annotation=Name(id='str', ctx=Load()))]),
+                    body=[
+                        # If -> +1, and the `or` inside it -> +1.
+                        If(
+                            test=BoolOp(
+                                op=Or(),
+                                values=[
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            # doctor_id.strip: receiver type unknown. Fallback rule: does exactly one user class
+                                            # have a member named 'strip'? No -> not counted.
+                                            func=Attribute(
+                                                value=Name(id='doctor_id', ctx=Load()),
+                                                attr='strip',
+                                                ctx=Load()))),
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            func=Attribute(
+                                                value=Name(id='date', ctx=Load()),
+                                                attr='strip',
+                                                ctx=Load())))]),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Doctor ID and appointment date are required')]))]),
+                        # Assign = `appointment = (doctor_id, date)`. Tuple isn't a user class -> no type.
+                        Assign(
+                            targets=[
+                                Name(id='appointment', ctx=Store())],
+                            value=Tuple(
+                                elts=[
+                                    Name(id='doctor_id', ctx=Load()),
+                                    Name(id='date', ctx=Load())],
+                                ctx=Load())),
+                        # If -> +1. Compare with In() = `appointment in self.appointments`.
+                        # self.appointments -> ("var", "Patient", "appointments").
+                        If(
+                            test=Compare(
+                                left=Name(id='appointment', ctx=Load()),
+                                ops=[
+                                    In()],
+                                comparators=[
+                                    Attribute(
+                                        value=Name(id='self', ctx=Load()),
+                                        attr='appointments',
+                                        ctx=Load())]),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='This appointment already exists')]))]),
+                        # Expr = a statement that's just an expression: self.appointments.append(appointment).
+                        # appointments is already in this method's set (counted once). .append is built-in.
+                        Expr(
+                            value=Call(
+                                func=Attribute(
+                                    value=Attribute(
+                                        value=Name(id='self', ctx=Load()),
+                                        attr='appointments',
+                                        ctx=Load()),
+                                    attr='append',
+                                    ctx=Load()),
+                                args=[
+                                    Name(id='appointment', ctx=Load())]))],
+                    # add_appointment total: CC = 1 + If + or + If = 4. Interactions: appointments (1 own var).
+                    returns=Constant(value=None)),
+                # ---- Patient.get_pending_prescriptions ----
+                FunctionDef(
+                    name='get_pending_prescriptions',
+                    args=arguments(
+                        args=[
+                            arg(arg='self')]),
+                    body=[
+                        Return(
+                            # ListComp = [p for p in self.prescriptions if not p.dispensed]
+                            value=ListComp(
+                                elt=Name(id='p', ctx=Load()),
+                                generators=[
+                                    # comprehension = the `for p in ...` part -> +1, plus +1 for each entry in ifs.
+                                    # iter is self.prescriptions = ("list", "Prescription"), so method_env() types p as Prescription.
+                                    comprehension(
+                                        target=Name(id='p', ctx=Store()),
+                                        # self.prescriptions -> ("var", "Patient", "prescriptions").
+                                        iter=Attribute(
+                                            value=Name(id='self', ctx=Load()),
+                                            attr='prescriptions',
+                                            ctx=Load()),
+                                        # ifs = the `if not p.dispensed` filter -> +1.
+                                        ifs=[
+                                            UnaryOp(
+                                                op=Not(),
+                                                # p.dispensed -> ("var", "Prescription", "dispensed"): a member of ANOTHER class,
+                                                # so this creates coupling Patient -> Prescription.
+                                                operand=Attribute(
+                                                    value=Name(id='p', ctx=Load()),
+                                                    attr='dispensed',
+                                                    ctx=Load()))],
+                                        is_async=0)]))],
+                    # returns list[Prescription]: used by type_of() when someone calls this method.
+                    # get_pending_prescriptions total: CC = 1 + for + if = 3. Interactions: 2 (1 own var, 1 Prescription var).
+                    returns=Subscript(
+                        value=Name(id='list', ctx=Load()),
+                        slice=Name(id='Prescription', ctx=Load()),
+                        ctx=Load()))],
+            decorator_list=[
+                Name(id='dataclass', ctx=Load())]),
+        # ================= CLASS Doctor =================
+        # WMC 8 (2 + 6) | Cohesion 2/5 = 0.40 | CBO 2 (Patient, Prescription)
+        # RFC Doctor.schedule_appointment -> Patient.add_appointment (2 methods, 1 call)
+        ClassDef(
+            name='Doctor',
+            body=[
+                AnnAssign(
+                    target=Name(id='doctor_id', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='name', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='specialty', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                # ---- Doctor.schedule_appointment ----
+                FunctionDef(
+                    name='schedule_appointment',
+                    args=arguments(
+                        args=[
+                            arg(arg='self'),
+                            # `patient: Patient` -> method_env() records patient as ("obj", "Patient").
+                            arg(
+                                arg='patient',
+                                annotation=Name(id='Patient', ctx=Load())),
+                            arg(
+                                arg='date',
+                                annotation=Name(id='str', ctx=Load()))]),
+                    body=[
+                        # If -> +1.
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                operand=Call(
+                                    # isinstance(patient, Patient): isinstance is built-in. `Patient` here is just a Name,
+                                    # not a call, so it is NOT a constructor and isn't counted.
+                                    func=Name(id='isinstance', ctx=Load()),
+                                    args=[
+                                        Name(id='patient', ctx=Load()),
+                                        Name(id='Patient', ctx=Load())])),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='TypeError', ctx=Load()),
+                                        args=[
+                                            Constant(value='A Patient object is required')]))]),
+                        Expr(
+                            value=Call(
+                                # patient.add_appointment(...) -> ("method", "Patient", "add_appointment").
+                                # Also an edge in rfc.py's call graph -> this is the RFC path.
+                                func=Attribute(
+                                    value=Name(id='patient', ctx=Load()),
+                                    attr='add_appointment',
+                                    ctx=Load()),
+                                args=[
+                                    # self.doctor_id -> ("var", "Doctor", "doctor_id").
+                                    Attribute(
+                                        value=Name(id='self', ctx=Load()),
+                                        attr='doctor_id',
+                                        ctx=Load()),
+                                    Name(id='date', ctx=Load())]))],
+                    # schedule_appointment total: CC = 1 + If = 2. Interactions: add_appointment, doctor_id.
+                    returns=Constant(value=None)),
+                # ---- Doctor.prescribe ----
+                FunctionDef(
+                    name='prescribe',
+                    args=arguments(
+                        args=[
+                            arg(arg='self'),
+                            arg(
+                                arg='patient',
+                                annotation=Name(id='Patient', ctx=Load())),
+                            arg(
+                                arg='medicine',
+                                annotation=Name(id='str', ctx=Load())),
+                            arg(
+                                arg='quantity',
+                                annotation=Name(id='int', ctx=Load()))]),
+                    body=[
+                        # If -> +1.
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                operand=Call(
+                                    func=Name(id='isinstance', ctx=Load()),
+                                    args=[
+                                        Name(id='patient', ctx=Load()),
+                                        Name(id='Patient', ctx=Load())])),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='TypeError', ctx=Load()),
+                                        args=[
+                                            Constant(value='A Patient object is required')]))]),
+                        # If -> +1 (medicine.strip is a built-in str method, not counted).
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                operand=Call(
+                                    func=Attribute(
+                                        value=Name(id='medicine', ctx=Load()),
+                                        attr='strip',
+                                        ctx=Load()))),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Medicine name is required')]))]),
+                        # If -> +1.
+                        If(
+                            # BoolOp(Or) with 3 values = `a or b or c` -> +2.
+                            test=BoolOp(
+                                op=Or(),
+                                values=[
+                                    Call(
+                                        func=Name(id='isinstance', ctx=Load()),
+                                        args=[
+                                            Name(id='quantity', ctx=Load()),
+                                            Name(id='bool', ctx=Load())]),
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            func=Name(id='isinstance', ctx=Load()),
+                                            args=[
+                                                Name(id='quantity', ctx=Load()),
+                                                Name(id='int', ctx=Load())])),
+                                    Compare(
+                                        left=Name(id='quantity', ctx=Load()),
+                                        ops=[
+                                            LtE()],
+                                        comparators=[
+                                            Constant(value=0)])]),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Quantity must be a positive integer')]))]),
+                        # `prescription = Prescription(...)`: a Call whose func is a user class name
+                        # -> ("ctor", "Prescription", "__init__"), and method_env() types prescription as Prescription.
+                        # Prescription has no __init__ written (the dataclass makes one), so there's no RFC edge.
+                        Assign(
+                            targets=[
+                                Name(id='prescription', ctx=Store())],
+                            value=Call(
+                                func=Name(id='Prescription', ctx=Load()),
+                                args=[
+                                    Call(
+                                        func=Attribute(
+                                            value=Name(id='medicine', ctx=Load()),
+                                            attr='strip',
+                                            ctx=Load())),
+                                    Name(id='quantity', ctx=Load()),
+                                    # self.doctor_id again: already in this method's set.
+                                    Attribute(
+                                        value=Name(id='self', ctx=Load()),
+                                        attr='doctor_id',
+                                        ctx=Load())])),
+                        # patient.prescriptions.append(...) -> ("var", "Patient", "prescriptions").
+                        Expr(
+                            value=Call(
+                                func=Attribute(
+                                    value=Attribute(
+                                        value=Name(id='patient', ctx=Load()),
+                                        attr='prescriptions',
+                                        ctx=Load()),
+                                    attr='append',
+                                    ctx=Load()),
+                                args=[
+                                    Name(id='prescription', ctx=Load())])),
+                        Return(
+                            value=Name(id='prescription', ctx=Load()))],
+                    # prescribe total: CC = 1 + 3 Ifs + 2 (or, or) = 6.
+                    # Interactions: Prescription ctor, doctor_id, Patient.prescriptions.
+                    returns=Name(id='Prescription', ctx=Load()))],
+            decorator_list=[
+                Name(id='dataclass', ctx=Load())]),
+        # ================= CLASS Nurse =================
+        # WMC 6 | Cohesion 0/1 = 0.00 (never uses its own vars) | CBO 1 (Patient)
+        # RFC Nurse.record_vitals (1 method, 0 calls)
+        ClassDef(
+            name='Nurse',
+            body=[
+                AnnAssign(
+                    target=Name(id='nurse_id', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='name', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                # ---- Nurse.record_vitals ----
+                FunctionDef(
+                    name='record_vitals',
+                    args=arguments(
+                        args=[
+                            arg(arg='self'),
+                            arg(
+                                # `patient: Patient` -> typed as Patient.
+                                arg='patient',
+                                annotation=Name(id='Patient', ctx=Load())),
+                            arg(
+                                arg='temperature_c',
+                                annotation=Name(id='float', ctx=Load())),
+                            arg(
+                                arg='heart_rate',
+                                annotation=Name(id='int', ctx=Load()))]),
+                    body=[
+                        # If -> +1.
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                operand=Call(
+                                    func=Name(id='isinstance', ctx=Load()),
+                                    args=[
+                                        Name(id='patient', ctx=Load()),
+                                        Name(id='Patient', ctx=Load())])),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='TypeError', ctx=Load()),
+                                        args=[
+                                            Constant(value='A Patient object is required')]))]),
+                        # If -> +1 (chained Compare 30 <= temperature_c <= 45 adds nothing).
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                operand=Compare(
+                                    left=Constant(value=30),
+                                    ops=[
+                                        LtE(),
+                                        LtE()],
+                                    comparators=[
+                                        Name(id='temperature_c', ctx=Load()),
+                                        Constant(value=45)])),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Temperature must be between 30 and 45 °C')]))]),
+                        # If -> +1, BoolOp(Or) with 3 values -> +2.
+                        If(
+                            test=BoolOp(
+                                op=Or(),
+                                values=[
+                                    Call(
+                                        func=Name(id='isinstance', ctx=Load()),
+                                        args=[
+                                            Name(id='heart_rate', ctx=Load()),
+                                            Name(id='bool', ctx=Load())]),
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            func=Name(id='isinstance', ctx=Load()),
+                                            args=[
+                                                Name(id='heart_rate', ctx=Load()),
+                                                Name(id='int', ctx=Load())])),
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Compare(
+                                            left=Constant(value=20),
+                                            ops=[
+                                                LtE(),
+                                                LtE()],
+                                            comparators=[
+                                                Name(id='heart_rate', ctx=Load()),
+                                                Constant(value=250)]))]),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Heart rate must be an integer between 20 and 250')]))]),
+                        Assign(
+                            targets=[
+                                Name(id='reading', ctx=Store())],
+                            # Dict = {'temperature_c': ..., 'heart_rate': ...}. Not counted.
+                            value=Dict(
+                                keys=[
+                                    Constant(value='temperature_c'),
+                                    Constant(value='heart_rate')],
+                                values=[
+                                    Name(id='temperature_c', ctx=Load()),
+                                    Name(id='heart_rate', ctx=Load())])),
+                        Expr(
+                            value=Call(
+                                # patient.vital_signs -> ("var", "Patient", "vital_signs"). Its only interaction.
+                                func=Attribute(
+                                    value=Attribute(
+                                        value=Name(id='patient', ctx=Load()),
+                                        attr='vital_signs',
+                                        ctx=Load()),
+                                    attr='append',
+                                    ctx=Load()),
+                                args=[
+                                    Name(id='reading', ctx=Load())])),
+                        Return(
+                            value=Name(id='reading', ctx=Load()))],
+                    # returns dict[str, int | float]: built-ins, no type.
+                    # record_vitals total: CC = 1 + 3 Ifs + 2 = 6.
+                    returns=Subscript(
+                        value=Name(id='dict', ctx=Load()),
+                        slice=Tuple(
+                            elts=[
+                                Name(id='str', ctx=Load()),
+                                BinOp(
+                                    left=Name(id='int', ctx=Load()),
+                                    op=BitOr(),
+                                    right=Name(id='float', ctx=Load()))],
+                            ctx=Load()),
+                        ctx=Load()))],
+            decorator_list=[
+                Name(id='dataclass', ctx=Load())]),
+        # ================= CLASS Pharmacist =================
+        # WMC 12 (5 + 7) | Cohesion 2/6 = 0.33 | CBO 2 (Patient, Prescription)
+        # RFC Pharmacist.add_stock (1 method, 0 calls): it never calls another user method.
+        ClassDef(
+            name='Pharmacist',
+            body=[
+                AnnAssign(
+                    target=Name(id='pharmacist_id', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                AnnAssign(
+                    target=Name(id='name', ctx=Store()),
+                    annotation=Name(id='str', ctx=Load()),
+                    simple=1),
+                # `inventory: dict[str, int] = field(default_factory=dict)` -> member var, no user type.
+                AnnAssign(
+                    target=Name(id='inventory', ctx=Store()),
+                    annotation=Subscript(
+                        value=Name(id='dict', ctx=Load()),
+                        slice=Tuple(
+                            elts=[
+                                Name(id='str', ctx=Load()),
+                                Name(id='int', ctx=Load())],
+                            ctx=Load()),
+                        ctx=Load()),
+                    value=Call(
+                        func=Name(id='field', ctx=Load()),
+                        keywords=[
+                            keyword(
+                                arg='default_factory',
+                                value=Name(id='dict', ctx=Load()))]),
+                    simple=1),
+                # ---- Pharmacist.add_stock ----
+                FunctionDef(
+                    name='add_stock',
+                    args=arguments(
+                        args=[
+                            arg(arg='self'),
+                            arg(
+                                arg='medicine',
+                                annotation=Name(id='str', ctx=Load())),
+                            arg(
+                                arg='quantity',
+                                annotation=Name(id='int', ctx=Load()))]),
+                    body=[
+                        # If -> +1.
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                operand=Call(
+                                    func=Attribute(
+                                        value=Name(id='medicine', ctx=Load()),
+                                        attr='strip',
+                                        ctx=Load()))),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Medicine name is required')]))]),
+                        # If -> +1, Or with 3 values -> +2.
+                        If(
+                            test=BoolOp(
+                                op=Or(),
+                                values=[
+                                    Call(
+                                        func=Name(id='isinstance', ctx=Load()),
+                                        args=[
+                                            Name(id='quantity', ctx=Load()),
+                                            Name(id='bool', ctx=Load())]),
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            func=Name(id='isinstance', ctx=Load()),
+                                            args=[
+                                                Name(id='quantity', ctx=Load()),
+                                                Name(id='int', ctx=Load())])),
+                                    Compare(
+                                        left=Name(id='quantity', ctx=Load()),
+                                        ops=[
+                                            LtE()],
+                                        comparators=[
+                                            Constant(value=0)])]),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Stock quantity must be a positive integer')]))]),
+                        # `key = medicine.strip().lower()`: Call nested inside Call (method chaining). Built-ins, not counted.
+                        Assign(
+                            targets=[
+                                Name(id='key', ctx=Store())],
+                            value=Call(
+                                func=Attribute(
+                                    value=Call(
+                                        func=Attribute(
+                                            value=Name(id='medicine', ctx=Load()),
+                                            attr='strip',
+                                            ctx=Load())),
+                                    attr='lower',
+                                    ctx=Load()))),
+                        # `self.inventory[key] = ...`: the target is a Subscript with ctx=Store.
+                        # The inner self.inventory is ctx=Load (the dict is read, then an item in it is set).
+                        # -> ("var", "Pharmacist", "inventory").
+                        Assign(
+                            targets=[
+                                Subscript(
+                                    value=Attribute(
+                                        value=Name(id='self', ctx=Load()),
+                                        attr='inventory',
+                                        ctx=Load()),
+                                    slice=Name(id='key', ctx=Load()),
+                                    ctx=Store())],
+                            # BinOp(op=Add) = `self.inventory.get(key, 0) + quantity`. .get is a built-in dict method.
+                            value=BinOp(
+                                left=Call(
+                                    func=Attribute(
+                                        value=Attribute(
+                                            value=Name(id='self', ctx=Load()),
+                                            attr='inventory',
+                                            ctx=Load()),
+                                        attr='get',
+                                        ctx=Load()),
+                                    args=[
+                                        Name(id='key', ctx=Load()),
+                                        Constant(value=0)]),
+                                op=Add(),
+                                right=Name(id='quantity', ctx=Load())))],
+                    # add_stock total: CC = 1 + If + If + 2 = 5. Interactions: inventory (1 own var).
+                    returns=Constant(value=None)),
+                # ---- Pharmacist.dispense ----
+                FunctionDef(
+                    name='dispense',
+                    args=arguments(
+                        args=[
+                            arg(arg='self'),
+                            # `patient: Patient` and `prescription: Prescription` -> both typed.
+                            arg(
+                                arg='patient',
+                                annotation=Name(id='Patient', ctx=Load())),
+                            arg(
+                                arg='prescription',
+                                annotation=Name(id='Prescription', ctx=Load()))]),
+                    body=[
+                        # If -> +1, `or` -> +1.
+                        If(
+                            test=BoolOp(
+                                op=Or(),
+                                values=[
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            func=Name(id='isinstance', ctx=Load()),
+                                            args=[
+                                                Name(id='patient', ctx=Load()),
+                                                Name(id='Patient', ctx=Load())])),
+                                    UnaryOp(
+                                        op=Not(),
+                                        operand=Call(
+                                            func=Name(id='isinstance', ctx=Load()),
+                                            args=[
+                                                Name(id='prescription', ctx=Load()),
+                                                Name(id='Prescription', ctx=Load())]))]),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='TypeError', ctx=Load()),
+                                        args=[
+                                            Constant(value='A Patient and a Prescription are required')]))]),
+                        # If -> +1.
+                        If(
+                            test=UnaryOp(
+                                op=Not(),
+                                operand=Call(
+                                    func=Name(id='any', ctx=Load()),
+                                    args=[
+                                        # GeneratorExp = (item is prescription for item in patient.prescriptions).
+                                        GeneratorExp(
+                                            elt=Compare(
+                                                left=Name(id='item', ctx=Load()),
+                                                ops=[
+                                                    Is()],
+                                                comparators=[
+                                                    Name(id='prescription', ctx=Load())]),
+                                            generators=[
+                                                # comprehension -> +1. patient.prescriptions -> ("var", "Patient", "prescriptions").
+                                                comprehension(
+                                                    target=Name(id='item', ctx=Store()),
+                                                    iter=Attribute(
+                                                        value=Name(id='patient', ctx=Load()),
+                                                        attr='prescriptions',
+                                                        ctx=Load()),
+                                                    is_async=0)])])),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Prescription does not belong to this patient')]))]),
+                        # If -> +1. prescription.dispensed -> ("var", "Prescription", "dispensed").
+                        If(
+                            test=Attribute(
+                                value=Name(id='prescription', ctx=Load()),
+                                attr='dispensed',
+                                ctx=Load()),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Prescription has already been dispensed')]))]),
+                        # prescription.medicine -> ("var", "Prescription", "medicine"). .lower is built-in.
+                        Assign(
+                            targets=[
+                                Name(id='key', ctx=Store())],
+                            value=Call(
+                                func=Attribute(
+                                    value=Attribute(
+                                        value=Name(id='prescription', ctx=Load()),
+                                        attr='medicine',
+                                        ctx=Load()),
+                                    attr='lower',
+                                    ctx=Load()))),
+                        # If -> +1. self.inventory -> own var; prescription.quantity -> Prescription var.
+                        If(
+                            test=Compare(
+                                left=Call(
+                                    func=Attribute(
+                                        value=Attribute(
+                                            value=Name(id='self', ctx=Load()),
+                                            attr='inventory',
+                                            ctx=Load()),
+                                        attr='get',
+                                        ctx=Load()),
+                                    args=[
+                                        Name(id='key', ctx=Load()),
+                                        Constant(value=0)]),
+                                ops=[
+                                    Lt()],
+                                comparators=[
+                                    Attribute(
+                                        value=Name(id='prescription', ctx=Load()),
+                                        attr='quantity',
+                                        ctx=Load())]),
+                            body=[
+                                Raise(
+                                    exc=Call(
+                                        func=Name(id='ValueError', ctx=Load()),
+                                        args=[
+                                            Constant(value='Insufficient medicine in stock')]))]),
+                        # AugAssign = `self.inventory[key] -= prescription.quantity` (op=Sub).
+                        AugAssign(
+                            target=Subscript(
+                                value=Attribute(
+                                    value=Name(id='self', ctx=Load()),
+                                    attr='inventory',
+                                    ctx=Load()),
+                                slice=Name(id='key', ctx=Load()),
+                                ctx=Store()),
+                            op=Sub(),
+                            value=Attribute(
+                                value=Name(id='prescription', ctx=Load()),
+                                attr='quantity',
+                                ctx=Load())),
+                        # `prescription.dispensed = True`: Attribute with ctx=Store, but the receiver isn't self,
+                        # so it does NOT add a var to Pharmacist. It's Prescription.dispensed (already in the set).
+                        Assign(
+                            targets=[
+                                Attribute(
+                                    value=Name(id='prescription', ctx=Load()),
+                                    attr='dispensed',
+                                    ctx=Store())],
+                            value=Constant(value=True))],
+                    # dispense total: CC = 1 + If + or + If + generator for + If + If = 7.
+                    # Interactions: inventory (own), Patient.prescriptions, Prescription.dispensed/medicine/quantity.
+                    returns=Constant(value=None))],
+            decorator_list=[
+                Name(id='dataclass', ctx=Load())]),
+        # ================= MODULE-LEVEL DEMO =================
+        # `if __name__ == '__main__':` is outside every class, so all four metrics ignore it.
+        If(
+            test=Compare(
+                left=Name(id='__name__', ctx=Load()),
+                ops=[
+                    Eq()],
+                comparators=[
+                    Constant(value='__main__')]),
+            body=[
+                # `patient = Patient('P101', ...)` etc.: objects for the demo run. Not part of any class.
+                Assign(
+                    targets=[
+                        Name(id='patient', ctx=Store())],
+                    value=Call(
+                        func=Name(id='Patient', ctx=Load()),
+                        args=[
+                            Constant(value='P101'),
+                            Constant(value='Alex Rivera'),
+                            Constant(value=30)])),
+                Assign(
+                    targets=[
+                        Name(id='doctor', ctx=Store())],
+                    value=Call(
+                        func=Name(id='Doctor', ctx=Load()),
+                        args=[
+                            Constant(value='D201'),
+                            Constant(value='Dr. Morgan'),
+                            Constant(value='General Medicine')])),
+                Assign(
+                    targets=[
+                        Name(id='nurse', ctx=Store())],
+                    value=Call(
+                        func=Name(id='Nurse', ctx=Load()),
+                        args=[
+                            Constant(value='N301'),
+                            Constant(value='Taylor Lee')])),
+                Assign(
+                    targets=[
+                        Name(id='pharmacist', ctx=Store())],
+                    value=Call(
+                        func=Name(id='Pharmacist', ctx=Load()),
+                        args=[
+                            Constant(value='PH401'),
+                            Constant(value='Jordan Kim')])),
+                # doctor.schedule_appointment(...), nurse.record_vitals(...), ...: demo calls.
+                # keywords= holds named arguments like temperature_c=37.0.
+                Expr(
+                    value=Call(
+                        func=Attribute(
+                            value=Name(id='doctor', ctx=Load()),
+                            attr='schedule_appointment',
+                            ctx=Load()),
+                        args=[
+                            Name(id='patient', ctx=Load()),
+                            Constant(value='2026-11-05 09:00')])),
+                Expr(
+                    value=Call(
+                        func=Attribute(
+                            value=Name(id='nurse', ctx=Load()),
+                            attr='record_vitals',
+                            ctx=Load()),
+                        args=[
+                            Name(id='patient', ctx=Load())],
+                        keywords=[
+                            keyword(
+                                arg='temperature_c',
+                                value=Constant(value=37.0)),
+                            keyword(
+                                arg='heart_rate',
+                                value=Constant(value=72))])),
+                Assign(
+                    targets=[
+                        Name(id='prescription', ctx=Store())],
+                    value=Call(
+                        func=Attribute(
+                            value=Name(id='doctor', ctx=Load()),
+                            attr='prescribe',
+                            ctx=Load()),
+                        args=[
+                            Name(id='patient', ctx=Load()),
+                            Constant(value='ExampleMed'),
+                            Constant(value=5)])),
+                Expr(
+                    value=Call(
+                        func=Attribute(
+                            value=Name(id='pharmacist', ctx=Load()),
+                            attr='add_stock',
+                            ctx=Load()),
+                        args=[
+                            Constant(value='ExampleMed'),
+                            Constant(value=12)])),
+                Expr(
+                    value=Call(
+                        func=Attribute(
+                            value=Name(id='pharmacist', ctx=Load()),
+                            attr='dispense',
+                            ctx=Load()),
+                        args=[
+                            Name(id='patient', ctx=Load()),
+                            Name(id='prescription', ctx=Load())])),
+                # print(...) calls: show the demo results. Subscript with UnaryOp(USub) = [-1] (last item).
+                Expr(
+                    value=Call(
+                        func=Name(id='print', ctx=Load()),
+                        args=[
+                            Constant(value='Patient:'),
+                            Attribute(
+                                value=Name(id='patient', ctx=Load()),
+                                attr='name',
+                                ctx=Load())])),
+                Expr(
+                    value=Call(
+                        func=Name(id='print', ctx=Load()),
+                        args=[
+                            Constant(value='Appointments:'),
+                            Attribute(
+                                value=Name(id='patient', ctx=Load()),
+                                attr='appointments',
+                                ctx=Load())])),
+                Expr(
+                    value=Call(
+                        func=Name(id='print', ctx=Load()),
+                        args=[
+                            Constant(value='Latest vitals:'),
+                            Subscript(
+                                value=Attribute(
+                                    value=Name(id='patient', ctx=Load()),
+                                    attr='vital_signs',
+                                    ctx=Load()),
+                                slice=UnaryOp(
+                                    op=USub(),
+                                    operand=Constant(value=1)),
+                                ctx=Load())])),
+                Expr(
+                    value=Call(
+                        func=Name(id='print', ctx=Load()),
+                        args=[
+                            Constant(value='Prescription dispensed:'),
+                            Attribute(
+                                value=Name(id='prescription', ctx=Load()),
+                                attr='dispensed',
+                                ctx=Load())])),
+                Expr(
+                    value=Call(
+                        func=Name(id='print', ctx=Load()),
+                        args=[
+                            Constant(value='Remaining stock:'),
+                            Subscript(
+                                value=Attribute(
+                                    value=Name(id='pharmacist', ctx=Load()),
+                                    attr='inventory',
+                                    ctx=Load()),
+                                slice=Constant(value='examplemed'),
+                                ctx=Load())]))])])
